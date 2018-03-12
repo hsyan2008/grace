@@ -101,17 +101,17 @@ func (a *app) term(wg *sync.WaitGroup) {
 
 func (a *app) signalHandler(wg *sync.WaitGroup) {
 	ch := make(chan os.Signal, 10)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR2)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		sig := <-ch
 		switch sig {
-		case syscall.SIGINT, syscall.SIGTERM:
-			// this ensures a subsequent INT/TERM will trigger standard go behaviour of
+		case syscall.SIGINT:
+			// this ensures a subsequent INT will trigger standard go behaviour of
 			// terminating.
 			signal.Stop(ch)
 			a.term(wg)
 			return
-		case syscall.SIGUSR2:
+		case syscall.SIGTERM:
 			err := a.preStartProcess()
 			if err != nil {
 				a.errors <- err
@@ -151,7 +151,11 @@ func (a *app) run() error {
 
 	// Close the parent if we inherited and it wasn't init that started us.
 	if didInherit && ppid != 1 {
-		if err := syscall.Kill(ppid, syscall.SIGTERM); err != nil {
+		p, err := os.FindProcess(ppid)
+		if err != nil {
+			return fmt.Errorf("failed to find parent: %s", err)
+		}
+		if err := p.Kill(); err != nil {
 			return fmt.Errorf("failed to close parent: %s", err)
 		}
 	}
