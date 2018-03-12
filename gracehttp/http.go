@@ -101,17 +101,17 @@ func (a *app) term(wg *sync.WaitGroup) {
 
 func (a *app) signalHandler(wg *sync.WaitGroup) {
 	ch := make(chan os.Signal, 10)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(ch, syscall.SIGQUIT, syscall.SIGHUP)
 	for {
 		sig := <-ch
 		switch sig {
-		case syscall.SIGINT:
+		case syscall.SIGQUIT:
 			// this ensures a subsequent INT will trigger standard go behaviour of
 			// terminating.
 			signal.Stop(ch)
 			a.term(wg)
 			return
-		case syscall.SIGTERM:
+		case syscall.SIGHUP:
 			err := a.preStartProcess()
 			if err != nil {
 				a.errors <- err
